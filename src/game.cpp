@@ -43,8 +43,7 @@ bool Game::init() {
     SDL_SetTextureScaleMode(sheet, SDL_SCALEMODE_NEAREST);
     font.sheet = sheet;
 
-    spawn_mushrooms(40);
-    state = SPAWNING_MUSHROOMS;
+    state = MAIN_MENU;
 
     running = true;
     return true;
@@ -69,6 +68,31 @@ void Game::run() {
     PRIVATE METHODS
 
 */
+
+void Game::start_game() {
+    score = 0;
+    lives = PLAYER_LIVES;
+    wave = 1;
+
+    mushrooms.clear();
+    mushroom_spawn_queue.clear();
+    centipedes.clear();
+    heal_queue.clear();
+
+    spider.active   = false;
+    flea.active     = false;
+    scorpion.active = false;
+    bullet.active   = false;
+
+    spider_spawn_timer   = SPIDER_SPAWN_RATE;
+    scorpion_spawn_timer = SCORPION_SPAWN_RATE;
+    flea_check_timer     = 3.0f;
+
+    player.init();
+
+    spawn_mushrooms(40);
+    state = SPAWNING_MUSHROOMS;
+}
 
 
 void Game::spawn_mushrooms(int count) {
@@ -126,6 +150,7 @@ void Game::check_player_death() {
             SDL_FRect sr = s.rect();
             if (SDL_HasRectIntersectionFloat(&player.rect, &sr)) {
                 lives --;
+                if (score > high_score) high_score = score;
                 state = (lives <= 0) ? GAME_OVER : DEAD;
                 death_timer = DEATH_DELAY;
                 audio.play_death();
@@ -213,14 +238,26 @@ void Game::handle_events() {
     SDL_Event event;
     while (SDL_PollEvent(&event)) {
         if (event.type == SDL_EVENT_QUIT) { running = false; }
-        if (event.type == SDL_EVENT_KEY_DOWN && event.key.scancode == SDL_SCANCODE_ESCAPE) running = false;
+        if (event.type == SDL_EVENT_KEY_DOWN) {
+            if (event.key.scancode == SDL_SCANCODE_ESCAPE) running = false;
+            if (event.key.scancode == SDL_SCANCODE_SPACE &&
+                (state == MAIN_MENU || state == GAME_OVER))
+                start_game();
+        }
     }
     poll_keyboard();
 }
 
 
 void Game::update(float dt) {
-    if (state == GAME_OVER) return;
+    
+    blink_timer -= dt;
+    if (blink_timer <= 0.0f) {
+        blink_timer   = 0.5f;
+        blink_visible = !blink_visible;
+    }
+
+    if (state == MAIN_MENU || state == GAME_OVER) return;
 
     if (state == DEAD) {
         death_timer -= dt;
@@ -430,6 +467,36 @@ void Game::render() {
 
     font.draw_int(renderer, lives, WINDOW_WIDTH - 120, 8, WINDOW_SCALE);
 
+    if (state == MAIN_MENU) {
+        SDL_SetRenderDrawBlendMode(renderer, SDL_BLENDMODE_BLEND);
+        SDL_SetRenderDrawColor(renderer, 0, 0, 0, 200);
+        SDL_FRect overlay = { 0, 0, WINDOW_WIDTH, WINDOW_HEIGHT };
+        SDL_RenderFillRect(renderer, &overlay);
+        SDL_SetRenderDrawBlendMode(renderer, SDL_BLENDMODE_NONE);
+
+        font.draw_string(renderer, "CENTIPEDE",
+            WINDOW_WIDTH / 2.0f - (9 * 9 * WINDOW_SCALE) / 2.0f,
+            WINDOW_HEIGHT / 2.0f - 40 * WINDOW_SCALE,
+            WINDOW_SCALE);
+
+        if (high_score > 0) {
+            char hs_buf[32];
+            snprintf(hs_buf, sizeof(hs_buf), "HIGH SCORE %d", high_score);
+            int hs_len = (int)strlen(hs_buf);
+            font.draw_string(renderer, hs_buf,
+                WINDOW_WIDTH / 2.0f - (hs_len * 9 * WINDOW_SCALE) / 2.0f,
+                WINDOW_HEIGHT / 2.0f - 16 * WINDOW_SCALE,
+                WINDOW_SCALE);
+        }
+
+        if (blink_visible) {
+            font.draw_string(renderer, "PRESS SPACE TO PLAY",
+                WINDOW_WIDTH / 2.0f - (19 * 9 * WINDOW_SCALE) / 2.0f,
+                WINDOW_HEIGHT / 2.0f + 16 * WINDOW_SCALE,
+                WINDOW_SCALE);
+        }
+    }
+    
     if (state == DEAD) {
         SDL_SetRenderDrawBlendMode(renderer, SDL_BLENDMODE_BLEND);
         SDL_SetRenderDrawColor(renderer, 255, 0, 0, 80);
@@ -444,10 +511,26 @@ void Game::render() {
         SDL_FRect overlay = { 0, 0, WINDOW_WIDTH, WINDOW_HEIGHT };
         SDL_RenderFillRect(renderer, &overlay);
         SDL_SetRenderDrawBlendMode(renderer, SDL_BLENDMODE_NONE);
-        font.draw_string(renderer, "GAME OVER", 
+
+        font.draw_string(renderer, "GAME OVER",
             WINDOW_WIDTH / 2.0f - (9 * 9 * WINDOW_SCALE) / 2.0f,
+            WINDOW_HEIGHT / 2.0f - 24 * WINDOW_SCALE,
+            WINDOW_SCALE);
+
+        char hs_buf[32];
+        snprintf(hs_buf, sizeof(hs_buf), "HIGH SCORE %d", high_score);
+        int hs_len = (int)strlen(hs_buf);
+        font.draw_string(renderer, hs_buf,
+            WINDOW_WIDTH / 2.0f - (hs_len * 9 * WINDOW_SCALE) / 2.0f,
             WINDOW_HEIGHT / 2.0f - 4 * WINDOW_SCALE,
             WINDOW_SCALE);
+
+        if (blink_visible) {
+            font.draw_string(renderer, "PRESS SPACE TO PLAY",
+                WINDOW_WIDTH / 2.0f - (19 * 9 * WINDOW_SCALE) / 2.0f,
+                WINDOW_HEIGHT / 2.0f + 16 * WINDOW_SCALE,
+                WINDOW_SCALE);
+        }
     }
 
     SDL_RenderPresent(renderer);

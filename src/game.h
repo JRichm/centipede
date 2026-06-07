@@ -67,9 +67,15 @@ class Game {
         int lives = PLAYER_LIVES;
         int wave = 1;
         int score = 0;
+        int high_score = 0;
         float death_timer = 0.0f;
 
+        // display settings
+        float blink_timer = 0.0f;
+        bool  blink_visible = true;
+
         // private methods
+        void start_game();
         void spawn_mushrooms(int count);
         void update_mushroom_spawns(float dt);
         void spawn_centipede();

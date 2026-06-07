@@ -449,17 +449,28 @@ void Game::render() {
     bullet.render(renderer);
 
     float hud_y = (HUD_HEIGHT - 8.0f * WINDOW_SCALE) / 2.0f;
+    float char_w = 9.0f * WINDOW_SCALE;
 
-    font.draw_int(renderer, score, 8, hud_y, WINDOW_SCALE, palette);
+    char score_buf[8];
+    snprintf(score_buf, sizeof(score_buf), "%d", score);
+    int score_len = (int)strlen(score_buf);
+    float score_field_right = 8.0f + 5 * char_w;
+    float score_x = score_field_right - score_len * char_w;
+    font.draw_string(renderer, score_buf, score_x, hud_y, WINDOW_SCALE, palette);
 
-    char hs_buf[32];
-    snprintf(hs_buf, sizeof(hs_buf), "HI %d", high_score);
+    SDL_FRect p_src = Player::player_src(palette);
+    float lives_x = score_field_right + char_w;
+    for (int i = 0; i < lives; i++) {
+        SDL_FRect dst = { lives_x + i * (PLAYER_W + 4.0f), hud_y, float(PLAYER_W), float(PLAYER_H) };
+        SDL_RenderTexture(renderer, sheet, &p_src, &dst);
+    }
+
+    char hs_buf[16];
+    snprintf(hs_buf, sizeof(hs_buf), "%d", high_score);
     int hs_len = (int)strlen(hs_buf);
     font.draw_string(renderer, hs_buf,
-        WINDOW_WIDTH / 2.0f - (hs_len * 9.0f * WINDOW_SCALE) / 2.0f,
+        WINDOW_WIDTH / 2.0f - (hs_len * char_w) / 2.0f,
         hud_y, WINDOW_SCALE, palette);
-
-    font.draw_int(renderer, lives, WINDOW_WIDTH - 120, hud_y, WINDOW_SCALE, palette);
 
     if (state == MAIN_MENU) {
         SDL_SetRenderDrawBlendMode(renderer, SDL_BLENDMODE_BLEND);

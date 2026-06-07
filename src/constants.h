@@ -11,7 +11,9 @@
 
 #define CELL_PX (CELL_SIZE * WINDOW_SCALE) // pixel size of one cell
 
-#define PLAYER_ZONE_TOP (WINDOW_HEIGHT * 0.70f)
+#define HUD_HEIGHT CELL_PX
+#define PLAY_TOP   HUD_HEIGHT
+#define PLAYER_ZONE_TOP (HUD_HEIGHT + (WINDOW_HEIGHT - HUD_HEIGHT) * 0.70f)
 
 #define SPRITE_W 7
 #define SPRITE_H 8

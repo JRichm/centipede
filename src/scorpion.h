@@ -38,8 +38,8 @@ struct Scorpion {
         frame = 0;
         frame_timer = 0.0f;
 
-        int max_row = int(PLAYER_ZONE_TOP / CELL_PX) - 1;
-        int row = 1 + rand() % SDL_max(1, max_row);
+        int max_row = int(PLAYER_ZONE_TOP / CELL_PX) - 2;
+        int row = 2 + rand() % SDL_max(1, max_row);
         y = float(row * CELL_PX);
 
         bool from_left = rand() % 2 == 0;

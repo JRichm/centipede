@@ -119,7 +119,7 @@ struct Centipede {
         }
 
         speed = speed_override;
-        s_target_y = 0.0f;
+        s_target_y = float(CELL_PX);
 
         for (int i = (int)segments.size() - 1; i >= 0; i--) {
             crumbs.push_back({ segments[i].x, segments[i].y, -1, FACING_VERT });
@@ -239,12 +239,12 @@ private:
         if (entering) {
             s.y += dist;
             s.facing = FACING_VERT;
-            if (s.y >= 0.0f) {
-                s.y = 0.0f;
+            if (s.y >= float(CELL_PX)) {
+                s.y = float(CELL_PX);
                 entering = false;
                 s.hdir = (rand() % 2 == 0) ? 1 : -1;
                 s.facing = FACING_HORZ;
-                s_target_y = 0.0f;
+                s_target_y = float(CELL_PX);
             }
             return;
         }
@@ -342,7 +342,7 @@ private:
             vdir = -1;
             s_target_y = s.y - float(CELL_PX);
         }
-        if (s_target_y < 0.0f) {
+        if (s_target_y < float(CELL_PX)) {
             vdir = 1;
             s_target_y = s.y + float(CELL_PX);
         }

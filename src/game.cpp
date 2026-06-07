@@ -101,7 +101,7 @@ void Game::start_game() {
 void Game::spawn_mushrooms(int count) {
     for (int i = 0; i < count; i++) {
         int col = rand() % GRID_COLS;
-        int row = rand() % (int)(GRID_ROWS * 0.75f);
+        int row = 1 + rand() % (int)((GRID_ROWS - 1) * 0.75f);
         float x = float(col * CELL_PX);
         float y = float(row * CELL_PX);
         bool occupied = false;
@@ -448,9 +448,18 @@ void Game::render() {
 
     bullet.render(renderer);
 
-    font.draw_int(renderer, score, 8, 8, WINDOW_SCALE, palette);
+    float hud_y = (HUD_HEIGHT - 8.0f * WINDOW_SCALE) / 2.0f;
 
-    font.draw_int(renderer, lives, WINDOW_WIDTH - 120, 8, WINDOW_SCALE, palette);
+    font.draw_int(renderer, score, 8, hud_y, WINDOW_SCALE, palette);
+
+    char hs_buf[32];
+    snprintf(hs_buf, sizeof(hs_buf), "HI %d", high_score);
+    int hs_len = (int)strlen(hs_buf);
+    font.draw_string(renderer, hs_buf,
+        WINDOW_WIDTH / 2.0f - (hs_len * 9.0f * WINDOW_SCALE) / 2.0f,
+        hud_y, WINDOW_SCALE, palette);
+
+    font.draw_int(renderer, lives, WINDOW_WIDTH - 120, hud_y, WINDOW_SCALE, palette);
 
     if (state == MAIN_MENU) {
         SDL_SetRenderDrawBlendMode(renderer, SDL_BLENDMODE_BLEND);

@@ -4,6 +4,7 @@
 
 #include "constants.h"
 #include "bullet.h"
+#include "wave_palette.h"
 
 struct InputState {
     float dx = 0.0f;
@@ -16,7 +17,9 @@ struct Player {
     SDL_FRect rect     = {};
     float     speed    = PLAYER_SPEED;
 
-    static constexpr SDL_FRect src = { 21.0f, 9.0f, 7.0f, 8.0f };
+    static SDL_FRect player_src(SDL_Point palette) {
+        return { float(palette.x + 21), float(palette.y + 9), 7.0f, 8.0f };
+    }
 
     bool init() {
         rect.w = PLAYER_W;
@@ -35,7 +38,8 @@ struct Player {
             bullet.spawn(rect.x, rect.y, rect.w);
     }
 
-    void render(SDL_Renderer *renderer, SDL_Texture *sheet) {
-        SDL_RenderTexture(renderer, sheet, &src, &rect);
+    void render(SDL_Renderer *renderer, SDL_Texture *sheet, SDL_Point palette) {
+        SDL_FRect s = player_src(palette);
+        SDL_RenderTexture(renderer, sheet, &s, &rect);
     }
 };

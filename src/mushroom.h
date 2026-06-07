@@ -4,22 +4,15 @@
 
 #include "constants.h"
 #include "bullet.h"
+#include "wave_palette.h"
 
 
-static constexpr SDL_FRect MUSHROOM_FRAMES[MUSHROOM_MAX_HP] = {
-    { 68, 72, 8, 8 },
-    { 77, 72, 8, 8 },
-    { 86, 72, 8, 8 },
-    { 95, 72, 8, 8 },
-};
-
-
-static constexpr SDL_FRect MUSHROOM_FRAMES_POISONED[MUSHROOM_MAX_HP] = {
-    { 68, 81, 8, 8 },
-    { 77, 81, 8, 8 },
-    { 86, 81, 8, 8 },
-    { 95, 81, 8, 8 },
-};
+inline SDL_FRect MUSHROOM_FRAME(SDL_Point o, int idx) {
+    return { float(o.x + 68 + idx * 9), float(o.y + 72), 8, 8 };
+}
+inline SDL_FRect MUSHROOM_FRAME_POISONED(SDL_Point o, int idx) {
+    return { float(o.x + 68 + idx * 9), float(o.y + 81), 8, 8 };
+}
 
 
 struct Mushroom {
@@ -42,12 +35,12 @@ struct Mushroom {
         return true;
     }
 
-    void render(SDL_Renderer *renderer, SDL_Texture *sheet) {
+    void render(SDL_Renderer *renderer, SDL_Texture *sheet, SDL_Point palette) {
         if (!active) return;
-        const SDL_FRect *src = poisoned
-            ? &MUSHROOM_FRAMES_POISONED[MUSHROOM_MAX_HP - hp]
-            : &MUSHROOM_FRAMES[MUSHROOM_MAX_HP - hp];
-        SDL_RenderTexture(renderer, sheet, src, &rect);
+        SDL_FRect src = poisoned
+            ? MUSHROOM_FRAME_POISONED(palette, MUSHROOM_MAX_HP - hp)
+            : MUSHROOM_FRAME(palette, MUSHROOM_MAX_HP - hp);
+        SDL_RenderTexture(renderer, sheet, &src, &rect);
     }
 };
 
@@ -60,8 +53,8 @@ struct HealAnimation {
     bool active = false;
     int mushroom_index = -1;
 
-    SDL_FRect src_rect() const {
-        return { 68.0f + float(frame * 17), 63.0f, 16.0f, 8.0f };
+    SDL_FRect src_rect(SDL_Point palette) const {
+        return { float(palette.x + 68 + frame * 17), float(palette.y + 63), 16.0f, 8.0f };
     }
 
     SDL_FRect dst_rect() const {
@@ -92,9 +85,9 @@ struct HealAnimation {
         return false;
     }
 
-    void render(SDL_Renderer *renderer, SDL_Texture *sheet) {
+    void render(SDL_Renderer *renderer, SDL_Texture *sheet, SDL_Point palette) {
         if (!active) return;
-        SDL_FRect src = src_rect();
+        SDL_FRect src = src_rect(palette);
         SDL_FRect dst = dst_rect();
         SDL_RenderTexture(renderer, sheet, &src, &dst);
     }

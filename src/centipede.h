@@ -8,16 +8,17 @@
 #include "types.h"
 #include "bullet.h"
 #include "mushroom.h"
+#include "wave_palette.h"
 
 enum SegFacing { FACING_HORZ, FACING_DIAG, FACING_VERT };
 
 
-static constexpr SDL_FRect SEG_HEAD_HORIZ   = {  4, 18, 8, 8 };
-static constexpr SDL_FRect SEG_HEAD_DIAG    = {  4, 27, 8, 8 };
-static constexpr SDL_FRect SEG_HEAD_VERT    = { 38, 27, 8, 8 };
-static constexpr SDL_FRect SEG_BODY_HORIZ   = {  4, 36, 8, 8 };
-static constexpr SDL_FRect SEG_BODY_DIAG    = {  4, 45, 8, 8 };
-static constexpr SDL_FRect SEG_BODY_VERT    = { 38, 45, 8, 8 };
+inline SDL_FRect SEG_HEAD_HORIZ(SDL_Point o) { return { float(o.x +  4), float(o.y + 18), 8, 8 }; }
+inline SDL_FRect SEG_HEAD_DIAG (SDL_Point o) { return { float(o.x +  4), float(o.y + 27), 8, 8 }; }
+inline SDL_FRect SEG_HEAD_VERT (SDL_Point o) { return { float(o.x + 38), float(o.y + 27), 8, 8 }; }
+inline SDL_FRect SEG_BODY_HORIZ(SDL_Point o) { return { float(o.x +  4), float(o.y + 36), 8, 8 }; }
+inline SDL_FRect SEG_BODY_DIAG (SDL_Point o) { return { float(o.x +  4), float(o.y + 45), 8, 8 }; }
+inline SDL_FRect SEG_BODY_VERT (SDL_Point o) { return { float(o.x + 38), float(o.y + 45), 8, 8 }; }
 
 
 struct Segment {
@@ -122,26 +123,26 @@ struct Centipede {
         return result;
     }
 
-    void render(SDL_Renderer *renderer, SDL_Texture *sheet) {
+    void render(SDL_Renderer *renderer, SDL_Texture *sheet, SDL_Point palette) {
         for (int i = 0; i < (int)segments.size(); i++) {
             const Segment &s = segments[i];
             SDL_FRect dst    = s.rect();
 
-            const SDL_FRect *src;
+            SDL_FRect src;
             if (i == 0) {
-                if      (s.facing == FACING_HORZ) src = &SEG_HEAD_HORIZ;
-                else if (s.facing == FACING_DIAG) src = &SEG_HEAD_DIAG;
-                else                              src = &SEG_HEAD_VERT;
+                if      (s.facing == FACING_HORZ) src = SEG_HEAD_HORIZ(palette);
+                else if (s.facing == FACING_DIAG) src = SEG_HEAD_DIAG(palette);
+                else                              src = SEG_HEAD_VERT(palette);
             } else {
-                if      (s.facing == FACING_HORZ) src = &SEG_BODY_HORIZ;
-                else if (s.facing == FACING_DIAG) src = &SEG_BODY_DIAG;
-                else                              src = &SEG_BODY_VERT;
+                if      (s.facing == FACING_HORZ) src = SEG_BODY_HORIZ(palette);
+                else if (s.facing == FACING_DIAG) src = SEG_BODY_DIAG(palette);
+                else                              src = SEG_BODY_VERT(palette);
             }
 
             // flip horizontally when moving right
             SDL_FlipMode flip = (s.hdir == 1) ? SDL_FLIP_HORIZONTAL : SDL_FLIP_NONE;
 
-            SDL_RenderTextureRotated(renderer, sheet, src, &dst, 0.0, nullptr, flip);
+            SDL_RenderTextureRotated(renderer, sheet, &src, &dst, 0.0, nullptr, flip);
         }
     }
 

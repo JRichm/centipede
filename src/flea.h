@@ -6,6 +6,7 @@
 
 #include "constants.h"
 #include "bullet.h"
+#include "wave_palette.h"
  
 
 struct Flea {
@@ -24,10 +25,13 @@ struct Flea {
         return { x, y, float(FLEA_W), float(FLEA_H) };
     }
 
-    SDL_FRect src_rect() const {
-        return { float(frame * 17), 63.0f,
-                 float(FLEA_FRAME_W), float(FLEA_FRAME_H) };
-    }
+    SDL_FRect src_rect(SDL_Point palette) const {
+        return {
+            float(palette.x + frame * 17),
+            float(palette.y + 63),
+            float(FLEA_FRAME_W),
+            float(FLEA_FRAME_H) };
+        }
 
     void spawn() {
         active = true;
@@ -101,9 +105,9 @@ struct Flea {
         return should_drop;
     }
 
-    void render(SDL_Renderer *renderer, SDL_Texture *sheet) {
+    void render(SDL_Renderer *renderer, SDL_Texture *sheet, SDL_Point palette) {
         if (!active) return;
-        SDL_FRect src = src_rect();
+        SDL_FRect src = src_rect(palette);
         SDL_FRect dst = rect();
         SDL_RenderTexture(renderer, sheet, &src, &dst);
     }

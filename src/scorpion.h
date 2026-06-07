@@ -7,6 +7,7 @@
 #include "constants.h"
 #include "mushroom.h"
 #include "bullet.h"
+#include "wave_palette.h"
 
 
 struct Scorpion {
@@ -30,7 +31,7 @@ struct Scorpion {
     };
 }
 
-    SDL_FRect src_rect() const { return { float(frame * 17), 72.0f, float(SCORPION_FRAME_W), float(SCORPION_FRAME_H) }; }
+    SDL_FRect src_rect(SDL_Point palette) const { return { float(palette.x + frame * 17), float(palette.y + 72), float(SCORPION_FRAME_W), float(SCORPION_FRAME_H) }; }
 
     void spawn() {
         active = true;
@@ -80,9 +81,9 @@ struct Scorpion {
         return false;
     }
 
-    void render(SDL_Renderer *renderer, SDL_Texture *sheet) {
+    void render(SDL_Renderer *renderer, SDL_Texture *sheet, SDL_Point palette) {
         if (!active) return;
-        SDL_FRect src = src_rect();
+        SDL_FRect src = src_rect(palette);
         SDL_FRect dst = rect();
 
         SDL_FlipMode flip = (vx > 0) ? SDL_FLIP_HORIZONTAL : SDL_FLIP_NONE;

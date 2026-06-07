@@ -7,6 +7,7 @@
 
 #include "constants.h"
 #include "mushroom.h"
+#include "wave_palette.h"
 
 
 enum SpiderState { SPIDER_ZIGZAG, SPIDER_VERTICAL, SPIDER_EXITING };
@@ -32,9 +33,13 @@ struct Spider {
         return { x, y, float(SPIDER_W), float(SPIDER_H) };
     }
 
-    SDL_FRect src_rect() const {
-        return { float(frame * 17), 54.0f,
-                 float(SPIDER_FRAME_W), float(SPIDER_FRAME_H) };
+    SDL_FRect src_rect(SDL_Point palette) const {
+        return {
+            float(palette.x + frame * 17),
+            float(palette.y + 54),
+            float(SPIDER_FRAME_W),
+            float(SPIDER_FRAME_H)
+        };
     }
 
     void spawn() {
@@ -155,9 +160,9 @@ struct Spider {
         return SCORE_SPIDER_FAR;
     }
 
-    void render(SDL_Renderer *renderer, SDL_Texture *sheet) {
+    void render(SDL_Renderer *renderer, SDL_Texture *sheet, SDL_Point palette) {
         if (!active) return;
-        SDL_FRect src = src_rect();
+        SDL_FRect src = src_rect(palette);
         SDL_FRect dst = rect();
         SDL_FlipMode flip = (vx >= 0) ? SDL_FLIP_HORIZONTAL : SDL_FLIP_NONE;
         SDL_RenderTextureRotated(renderer, sheet, &src, &dst, 0.0, nullptr, flip);

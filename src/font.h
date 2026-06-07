@@ -3,12 +3,13 @@
 #include <cstdio>
 
 #include <SDL3/SDL.h>
+#include "wave_palette.h"
 
 
 struct Font {
     SDL_Texture *sheet = nullptr;
 
-    SDL_FRect get_char_rect(char c) const {
+    SDL_FRect get_char_rect(char c, int ox, int oy) const {
         int col = 0;
         int row = 0;
 
@@ -26,14 +27,21 @@ struct Font {
         }
 
         return {
-            float(col * 9),
-            float(90 + row * 9),
+            float(ox + col * 9),
+            float(oy + 90 + row * 9),
             8.0f,
             8.0f
         };
     }
 
-    void draw_string(SDL_Renderer *renderer, const char *text, float x, float y, float scale) const {
+    void draw_string(
+        SDL_Renderer *renderer,
+        const char *text,
+        float x,
+        float y,
+        float scale,
+        SDL_Point palette = {0, 0}
+    ) const {
         float cursor_x = x;
         for (int i = 0; text[i] != '\0'; i++) {
             char c = text[i];
@@ -44,7 +52,7 @@ struct Font {
 
             if (c >= 'a' && c <= 'z') c = c - 'a' + 'A';
 
-            SDL_FRect src = get_char_rect(c);
+            SDL_FRect src = get_char_rect(c, palette.x, palette.y);
             if (src.w == 0) {
                 cursor_x += 8.0f * scale + scale;
                 continue;
@@ -62,10 +70,16 @@ struct Font {
         }
     }
 
-    void draw_int(SDL_Renderer *renderer, int value,
-                  float x, float y, float scale) const {
+    void draw_int(
+        SDL_Renderer *renderer,
+        int value,
+        float x,
+        float y,
+        float scale,
+        SDL_Point palette = {0, 0}
+    ) const {
         char buf[32];
         snprintf(buf, sizeof(buf), "%d", value);
-        draw_string(renderer, buf, x, y, scale);
+        draw_string(renderer, buf, x, y, scale, palette);
     }
 };

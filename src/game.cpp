@@ -186,24 +186,13 @@ void Game::reset_after_death() {
 
 void Game::check_wave_complete() {
     if (!centipedes.empty()) return;
-    if (state == SPAWNING_MUSHROOMS || state == HEALING_MUSHROOMS) return;
+    if (state == SPAWNING_MUSHROOMS) return;
 
     wave++;
-    audio.play_bonus();
-
-    heal_queue.clear();
-    for (int i = 0; i < (int)mushrooms.size(); i++) {
-        if (mushrooms[i].active && mushrooms[i].poisoned)
-            heal_queue.push_back(i);
-    }
-
-    if (!heal_queue.empty()) {
-        start_next_heal();
-        state = HEALING_MUSHROOMS;
-    } else {
-        spawn_centipede();
-        state = PLAYING;
-    }
+    palette_pending = get_wave_origin(wave);
+    palette_change_timer = 0.5f;
+    spawn_centipede();
+    state = PLAYING;
 }
 
 void Game::start_next_heal() {
@@ -277,24 +266,10 @@ void Game::update(float dt) {
         return;
     }
 
-    if (state == HEALING_MUSHROOMS) {
-        if (heal_anim.update(dt)) {
-            // Animation done — heal the mushroom
-            int idx = heal_anim.mushroom_index;
-            if (idx >= 0 && idx < (int)mushrooms.size()) {
-                mushrooms[idx].poisoned = false;
-                mushrooms[idx].hp       = MUSHROOM_MAX_HP;
-            }
-
-            if (!heal_queue.empty()) {
-                start_next_heal();
-
-            } else {
-                spawn_centipede();
-                state = PLAYING;
-            }
-        }
-        return;
+    if (palette_change_timer > 0.0f) {
+        palette_change_timer -= dt;
+        if (palette_change_timer <= 0.0f)
+            palette = palette_pending;
     }
 
     bool bullet_was_active = bullet.active;
@@ -329,6 +304,7 @@ void Game::update(float dt) {
         if (SDL_HasRectIntersectionFloat(&player.rect, &sr)) {
             spider.active = false;
             lives--;
+            if (score > high_score) high_score = score;
             state       = (lives <= 0) ? GAME_OVER : DEAD;
             death_timer = DEATH_DELAY;
             audio.play_death();
@@ -375,6 +351,7 @@ void Game::update(float dt) {
         if (SDL_HasRectIntersectionFloat(&player.rect, &fr)) {
             flea.active = false;
             lives--;
+            if (score > high_score) high_score = score;
             state       = (lives <= 0) ? GAME_OVER : DEAD;
             death_timer = DEATH_DELAY;
             audio.play_death();
@@ -453,22 +430,22 @@ void Game::render() {
     SDL_RenderClear(renderer);
 
     
-    for (auto &m : mushrooms) m.render(renderer, sheet);
-    heal_anim.render(renderer, sheet);
-    for (auto &c : centipedes) c.render(renderer, sheet);
+    for (auto &m : mushrooms) m.render(renderer, sheet, palette);
+    heal_anim.render(renderer, sheet, palette);
+    for (auto &c : centipedes) c.render(renderer, sheet, palette);
 
-    spider.render(renderer, sheet);
-    flea.render(renderer, sheet);
-    scorpion.render(renderer, sheet);
+    spider.render(renderer, sheet, palette);
+    flea.render(renderer, sheet, palette);
+    scorpion.render(renderer, sheet, palette);
 
     if (state != DEAD)
-        player.render(renderer, sheet);
+        player.render(renderer, sheet, palette);
 
     bullet.render(renderer);
 
-    font.draw_int(renderer, score, 8, 8, WINDOW_SCALE);
+    font.draw_int(renderer, score, 8, 8, WINDOW_SCALE, palette);
 
-    font.draw_int(renderer, lives, WINDOW_WIDTH - 120, 8, WINDOW_SCALE);
+    font.draw_int(renderer, lives, WINDOW_WIDTH - 120, 8, WINDOW_SCALE, palette);
 
     if (state == MAIN_MENU) {
         SDL_SetRenderDrawBlendMode(renderer, SDL_BLENDMODE_BLEND);

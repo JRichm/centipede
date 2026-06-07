@@ -12,12 +12,20 @@
 
 enum SegFacing { FACING_HORZ, FACING_DIAG, FACING_VERT };
 
-inline SDL_FRect SEG_HEAD_HORIZ(SDL_Point o) { return { float(o.x +  4), float(o.y + 18), 8, 8 }; }
-inline SDL_FRect SEG_HEAD_DIAG (SDL_Point o) { return { float(o.x +  4), float(o.y + 27), 8, 8 }; }
-inline SDL_FRect SEG_HEAD_VERT (SDL_Point o) { return { float(o.x + 38), float(o.y + 27), 8, 8 }; }
-inline SDL_FRect SEG_BODY_HORIZ(SDL_Point o) { return { float(o.x +  4), float(o.y + 36), 8, 8 }; }
-inline SDL_FRect SEG_BODY_DIAG (SDL_Point o) { return { float(o.x +  4), float(o.y + 45), 8, 8 }; }
-inline SDL_FRect SEG_BODY_VERT (SDL_Point o) { return { float(o.x + 38), float(o.y + 45), 8, 8 }; }
+static constexpr int SEG_FRAME_STRIDE  = 17;
+static constexpr int SEG_FRAME_W       = 16;
+static constexpr int SEG_FRAME_H       = 8;
+static constexpr int SEG_HORZ_FRAMES   = 8;
+static constexpr int SEG_DIAG_FRAMES   = 2;
+static constexpr int SEG_VERT_FRAMES   = 4;
+static constexpr float SEG_FRAME_RATE  = 0.04f;
+
+inline SDL_FRect SEG_HEAD_HORIZ(SDL_Point o, int f) { return { float(o.x + f * SEG_FRAME_STRIDE),      float(o.y + 18), SEG_FRAME_W, SEG_FRAME_H }; }
+inline SDL_FRect SEG_HEAD_DIAG (SDL_Point o, int f) { return { float(o.x + f * SEG_FRAME_STRIDE),      float(o.y + 27), SEG_FRAME_W, SEG_FRAME_H }; }
+inline SDL_FRect SEG_HEAD_VERT (SDL_Point o, int f) { return { float(o.x + 34 + f * SEG_FRAME_STRIDE), float(o.y + 27), SEG_FRAME_W, SEG_FRAME_H }; }
+inline SDL_FRect SEG_BODY_HORIZ(SDL_Point o, int f) { return { float(o.x + f * SEG_FRAME_STRIDE),      float(o.y + 36), SEG_FRAME_W, SEG_FRAME_H }; }
+inline SDL_FRect SEG_BODY_DIAG (SDL_Point o, int f) { return { float(o.x + f * SEG_FRAME_STRIDE),      float(o.y + 45), SEG_FRAME_W, SEG_FRAME_H }; }
+inline SDL_FRect SEG_BODY_VERT (SDL_Point o, int f) { return { float(o.x + 34 + f * SEG_FRAME_STRIDE), float(o.y + 45), SEG_FRAME_W, SEG_FRAME_H }; }
 
 
 struct Segment {
@@ -28,6 +36,10 @@ struct Segment {
 
     SDL_FRect rect() const {
         return { x, y, float(CELL_PX), float(CELL_PX) };
+    }
+
+    SDL_FRect draw_rect() const {
+        return { x - float(CELL_PX / 2), y, float(CELL_PX * 2), float(CELL_PX) };
     }
 };
 
@@ -45,10 +57,13 @@ struct Centipede {
     std::vector<Waypoint> crumbs;
     float speed = CENTIPEDE_SPEED;
 
+    int frame       = 0;
+    float frame_timer = 0.0f;
+
     int vdir = 1;
 
     bool head_poisoned  = false;
-    int  poison_hdir    = 1;
+    int poison_hdir    = 1;
     bool poison_horiz   = false;
     float poison_hx_target = 0.0f;
 
@@ -62,6 +77,8 @@ struct Centipede {
         poison_horiz = false;
         vdir = 1;
         entering = false;
+        frame = 0;
+        frame_timer = 0.0f;
         s_target_y = float(start_row * CELL_PX);
 
         for (int i = 0; i < length; i++) {
@@ -86,6 +103,8 @@ struct Centipede {
         poison_horiz = false;
         vdir = 1;
         entering = true;
+        frame = 0;
+        frame_timer = 0.0f;
 
         int center_col = GRID_COLS / 2;
         float cx = float(center_col * CELL_PX);
@@ -121,6 +140,12 @@ struct Centipede {
 
         result = check_bullet_collision(bullet, out_split, did_split);
         if (result.killed) return result;
+
+        frame_timer -= dt;
+        if (frame_timer <= 0.0f) {
+            frame_timer = SEG_FRAME_RATE;
+            frame = (frame + 1) % SEG_HORZ_FRAMES;
+        }
 
         float dist = speed * dt;
         move_head(segments[0], dist, mushrooms);
@@ -166,17 +191,21 @@ struct Centipede {
     void render(SDL_Renderer *renderer, SDL_Texture *sheet, SDL_Point palette) {
         for (int i = 0; i < (int)segments.size(); i++) {
             const Segment &s = segments[i];
-            SDL_FRect dst    = s.rect();
+            SDL_FRect dst    = s.draw_rect();
+
+            int f_horz = frame % SEG_HORZ_FRAMES;
+            int f_diag = frame % SEG_DIAG_FRAMES;
+            int f_vert = frame % SEG_VERT_FRAMES;
 
             SDL_FRect src;
             if (i == 0) {
-                if      (s.facing == FACING_HORZ) src = SEG_HEAD_HORIZ(palette);
-                else if (s.facing == FACING_DIAG) src = SEG_HEAD_DIAG(palette);
-                else                              src = SEG_HEAD_VERT(palette);
+                if      (s.facing == FACING_HORZ) src = SEG_HEAD_HORIZ(palette, f_horz);
+                else if (s.facing == FACING_DIAG) src = SEG_HEAD_DIAG(palette,  f_diag);
+                else                              src = SEG_HEAD_VERT(palette,  f_vert);
             } else {
-                if      (s.facing == FACING_HORZ) src = SEG_BODY_HORIZ(palette);
-                else if (s.facing == FACING_DIAG) src = SEG_BODY_DIAG(palette);
-                else                              src = SEG_BODY_VERT(palette);
+                if      (s.facing == FACING_HORZ) src = SEG_BODY_HORIZ(palette, f_horz);
+                else if (s.facing == FACING_DIAG) src = SEG_BODY_DIAG(palette,  f_diag);
+                else                              src = SEG_BODY_VERT(palette,  f_vert);
             }
 
             SDL_FlipMode flip = (s.hdir == 1) ? SDL_FLIP_HORIZONTAL : SDL_FLIP_NONE;

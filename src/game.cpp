@@ -89,6 +89,9 @@ void Game::start_game() {
     flea_check_timer     = 3.0f;
 
     player.init();
+    palette = get_wave_origin(wave);
+    palette_pending = palette;
+    palette_change_timer = 0.0f;
 
     spawn_mushrooms(40);
     state = SPAWNING_MUSHROOMS;

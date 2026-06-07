@@ -16,6 +16,7 @@
 #include "centipede.h"
 #include "scorpion.h"
 #include "audio.h"
+#include "wave_palette.h"
 #include "types.h"
 
 
@@ -69,6 +70,9 @@ class Game {
         int score = 0;
         int high_score = 0;
         float death_timer = 0.0f;
+        SDL_Point palette = {0, 0};
+        SDL_Point palette_pending = {0, 0};
+        float palette_change_timer = 0.0f;
 
         // display settings
         float blink_timer = 0.0f;

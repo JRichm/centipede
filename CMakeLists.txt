@@ -22,7 +22,11 @@ endif()
 find_package(SDL3 REQUIRED)
 find_package(SDL3_image REQUIRED)
 
-add_executable(centipede src/main.cpp)
+add_executable(
+    centipede
+    src/main.cpp
+    src/game.cpp
+)
 
 target_link_libraries(centipede
     PRIVATE

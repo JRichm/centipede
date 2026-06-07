@@ -12,7 +12,6 @@
 
 enum SegFacing { FACING_HORZ, FACING_DIAG, FACING_VERT };
 
-
 inline SDL_FRect SEG_HEAD_HORIZ(SDL_Point o) { return { float(o.x +  4), float(o.y + 18), 8, 8 }; }
 inline SDL_FRect SEG_HEAD_DIAG (SDL_Point o) { return { float(o.x +  4), float(o.y + 27), 8, 8 }; }
 inline SDL_FRect SEG_HEAD_VERT (SDL_Point o) { return { float(o.x + 38), float(o.y + 27), 8, 8 }; }
@@ -45,11 +44,24 @@ struct Centipede {
     std::vector<Segment> segments;
     std::vector<Waypoint> crumbs;
     float speed = CENTIPEDE_SPEED;
-    bool head_poisoned = false;
+
+    int vdir = 1;
+
+    bool head_poisoned  = false;
+    int  poison_hdir    = 1;
+    bool poison_horiz   = false;
+    float poison_hx_target = 0.0f;
+
+    bool entering = false;
 
     void init(int start_col, int start_row, int length, int direction) {
         segments.clear();
         crumbs.clear();
+        head_poisoned = false;
+        poison_hdir = (rand() % 2 == 0) ? 1 : -1;
+        poison_horiz = false;
+        vdir = 1;
+        entering = false;
         s_target_y = float(start_row * CELL_PX);
 
         for (int i = 0; i < length; i++) {
@@ -66,7 +78,35 @@ struct Centipede {
         }
     }
 
-    
+    void init_entering(int length, float speed_override) {
+        segments.clear();
+        crumbs.clear();
+        head_poisoned = false;
+        poison_hdir = (rand() % 2 == 0) ? 1 : -1;
+        poison_horiz = false;
+        vdir = 1;
+        entering = true;
+
+        int center_col = GRID_COLS / 2;
+        float cx = float(center_col * CELL_PX);
+
+        for (int i = 0; i < length; i++) {
+            Segment s;
+            s.x = cx;
+            s.y = float(-(i + 1) * CELL_PX);
+            s.hdir = -1;
+            s.facing = FACING_VERT;
+            segments.push_back(s);
+        }
+
+        speed = speed_override;
+        s_target_y = 0.0f;
+
+        for (int i = (int)segments.size() - 1; i >= 0; i--) {
+            crumbs.push_back({ segments[i].x, segments[i].y, -1, FACING_VERT });
+        }
+    }
+
     bool is_dead() const { return segments.empty(); }
 
     HitResult update(
@@ -139,9 +179,7 @@ struct Centipede {
                 else                              src = SEG_BODY_VERT(palette);
             }
 
-            // flip horizontally when moving right
             SDL_FlipMode flip = (s.hdir == 1) ? SDL_FLIP_HORIZONTAL : SDL_FLIP_NONE;
-
             SDL_RenderTextureRotated(renderer, sheet, &src, &dst, 0.0, nullptr, flip);
         }
     }
@@ -168,71 +206,122 @@ private:
     }
 
     void move_head(Segment &s, float dist, const std::vector<Mushroom> &mushrooms) {
-        // ff poisoned, charge straight down ignoring walls and mushrooms
-        if (head_poisoned) {
+
+        if (entering) {
             s.y += dist;
             s.facing = FACING_VERT;
-            if (s.y >= float(WINDOW_HEIGHT)) {
-                s.y          = 0.0f;
-                head_poisoned = false;
-                s.facing     = FACING_HORZ;
+            if (s.y >= 0.0f) {
+                s.y = 0.0f;
+                entering = false;
+                s.hdir = (rand() % 2 == 0) ? 1 : -1;
+                s.facing = FACING_HORZ;
+                s_target_y = 0.0f;
+            }
+            return;
+        }
+
+        if (head_poisoned) {
+            if (poison_horiz) {
+                float target_x = poison_hx_target;
+                float step = poison_hdir * dist;
+                s.x += step;
+                s.facing = FACING_DIAG;
+
+                bool arrived = (poison_hdir > 0) ? (s.x >= target_x) : (s.x <= target_x);
+                if (arrived) {
+                    s.x = target_x;
+                    poison_horiz = false;
+                    s.facing = FACING_VERT;
+                    s_target_y = s.y + float(CELL_PX);
+                    if (s_target_y >= float(WINDOW_HEIGHT)) {
+                        head_poisoned = false;
+                        s.facing = FACING_HORZ;
+                    }
+                }
+            } else {
+                s.y += dist;
+                s.facing = FACING_VERT;
+                if (s.y >= s_target_y) {
+                    s.y = s_target_y;
+                    if (s.y + float(CELL_PX) >= float(WINDOW_HEIGHT)) {
+                        head_poisoned = false;
+                        s.facing = FACING_HORZ;
+                        return;
+                    }
+                    poison_horiz = true;
+                    poison_hx_target = SDL_clamp(
+                        s.x + float(poison_hdir * CELL_PX),
+                        0.0f,
+                        float((GRID_COLS - 1) * CELL_PX));
+                    poison_hdir = -poison_hdir;
+                }
             }
             return;
         }
 
         if (s.facing == FACING_DIAG || s.facing == FACING_VERT) {
-            s.y += dist;
-            if (s.facing == FACING_DIAG && s.y >= s_target_y - float(CELL_PX) * 0.5f)
-                s.facing = FACING_VERT;
-            if (s.y >= s_target_y) {
+            float step_y = float(vdir) * dist;
+            s.y += step_y;
+            if (s.facing == FACING_DIAG) {
+                float mid = (vdir > 0) ? s_target_y - float(CELL_PX) * 0.5f : s_target_y + float(CELL_PX) * 0.5f;
+                bool past_mid = (vdir > 0) ? (s.y >= mid) : (s.y <= mid);
+                if (past_mid) s.facing = FACING_VERT;
+            }
+            bool arrived = (vdir > 0) ? (s.y >= s_target_y) : (s.y <= s_target_y);
+            if (arrived) {
                 s.y = s_target_y;
                 s.facing = FACING_HORZ;
             }
-        } else {
-            float next_x = s.x + s.hdir * dist;
+            return;
+        }
 
-            if (s.hdir < 0 && next_x < 0.0f) {
-                next_x = 0.0f;
-                s.x = next_x;
-                s.hdir = 1;
-                s.facing = FACING_DIAG;
+        float next_x = s.x + s.hdir * dist;
+        bool hit_left  = (s.hdir < 0 && next_x < 0.0f);
+        bool hit_right = (s.hdir > 0 && next_x + float(CELL_PX) > float(WINDOW_WIDTH));
+
+        if (hit_left || hit_right) {
+            s.x = hit_left ? 0.0f : float(WINDOW_WIDTH - CELL_PX);
+            s.hdir = -s.hdir;
+            s.facing = FACING_DIAG;
+            step_into_next_row(s, dist);
+            return;
+        }
+        int next_col = (s.hdir > 0)
+            ? int(next_x + float(CELL_PX) - 1.0f) / CELL_PX
+            : int(next_x) / CELL_PX;
+
+        if (cell_blocked(next_col, int(s.y) / CELL_PX, mushrooms)) {
+            if (cell_poisoned(next_col, int(s.y) / CELL_PX, mushrooms)) {
+                head_poisoned = true;
+                poison_horiz = false;
                 s_target_y = s.y + float(CELL_PX);
-                if (s_target_y >= float(WINDOW_HEIGHT)) s_target_y = 0.0f;
-                s.y += dist;
-                if (s.y >= s_target_y) { s.y = s_target_y; s.facing = FACING_HORZ; }
-            } else if (s.hdir > 0 && next_x + float(CELL_PX) > float(WINDOW_WIDTH)) {
-                next_x = float(WINDOW_WIDTH - CELL_PX);
-                s.x = next_x;
-                s.hdir = -1;
-                s.facing = FACING_DIAG;
-                s_target_y = s.y + float(CELL_PX);
-                if (s_target_y >= float(WINDOW_HEIGHT)) s_target_y = 0.0f;
-                s.y += dist;
-                if (s.y >= s_target_y) { s.y = s_target_y; s.facing = FACING_HORZ; }
+                s.facing = FACING_VERT;
             } else {
-                int next_col = (s.hdir > 0)
-                    ? int(next_x + float(CELL_PX) - 1.0f) / CELL_PX
-                    : int(next_x) / CELL_PX;
-
-                if (cell_blocked(next_col, int(s.y) / CELL_PX, mushrooms)) {
-                    if (cell_poisoned(next_col, int(s.y) / CELL_PX, mushrooms)) {
-                        head_poisoned = true;
-                        s.facing = FACING_VERT;
-                    } else {
-                        s.hdir = -s.hdir;
-                        s.facing = FACING_DIAG;
-                        s_target_y = s.y + float(CELL_PX);
-                        if (s_target_y >= float(WINDOW_HEIGHT)) s_target_y = 0.0f;
-                        s.y += dist;
-                        if (s.y >= s_target_y) { s.y = s_target_y; s.facing = FACING_HORZ; }
-                    }
-                } else {
-                    s.x = next_x;
-                }
+                s.hdir = -s.hdir;
+                s.facing = FACING_DIAG;
+                step_into_next_row(s, dist);
             }
+        } else {
+            s.x = next_x;
         }
     }
-    
+
+    void step_into_next_row(Segment &s, float dist) {
+        s_target_y = s.y + float(vdir * CELL_PX);
+
+        if (s_target_y >= float(WINDOW_HEIGHT)) {
+            vdir = -1;
+            s_target_y = s.y - float(CELL_PX);
+        }
+        if (s_target_y < 0.0f) {
+            vdir = 1;
+            s_target_y = s.y + float(CELL_PX);
+        }
+
+        s.y += float(vdir) * dist;
+        bool arrived = (vdir > 0) ? (s.y >= s_target_y) : (s.y <= s_target_y);
+        if (arrived) { s.y = s_target_y; s.facing = FACING_HORZ; }
+    }
 
     HitResult check_bullet_collision(Bullet &bullet, Centipede &out_split, bool &did_split) {
         HitResult result;
@@ -255,14 +344,15 @@ private:
                 }
             } else {
                 out_split.segments = std::vector<Segment>(segments.begin() + i + 1, segments.end());
-                out_split.speed  = speed;
+                out_split.speed = speed;
+                out_split.vdir = vdir;
                 out_split.crumbs = {};
 
                 if (!out_split.segments.empty()) {
                     Segment &nh = out_split.segments[0];
                     nh.hdir = -nh.hdir;
                     nh.facing = FACING_DIAG;
-                    out_split.s_target_y = nh.y + float(CELL_PX);
+                    out_split.s_target_y = nh.y + float(vdir * CELL_PX);
 
                     for (auto &seg : out_split.segments)
                         out_split.crumbs.push_back({ seg.x, seg.y, seg.hdir, seg.facing });

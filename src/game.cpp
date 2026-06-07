@@ -141,9 +141,14 @@ void Game::spawn_centipede() {
     float spd = CENTIPEDE_SPEED + (wave - 1) * WAVE_SPEED_INC;
     spd = SDL_min(spd, CENTIPEDE_SPEED_MIN);
     Centipede c;
-    c.init(GRID_COLS - 1, 0, CENTIPEDE_LENGTH, -1);
-    c.speed = spd;
+    c.init_entering(CENTIPEDE_LENGTH, spd);
     centipedes.push_back(c);
+
+    if (wave >= 2) {
+        Centipede head;
+        head.init_entering(1, SDL_min(spd + CENTIPEDE_HEAD_SPEED_BONUS, CENTIPEDE_SPEED_MIN));
+        centipedes.push_back(head);
+    }
 }
 
 

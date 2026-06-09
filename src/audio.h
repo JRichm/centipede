@@ -28,14 +28,14 @@ struct Audio {
     MIX_Track *track_scorpion   = nullptr;
 
     // tune these to taste (1.0 = normal, 0.5 = half, 2.0 = double)
-    static constexpr float GAIN_SHOOT     = 0.5f;
-    static constexpr float GAIN_KILL      = 0.8f;
-    static constexpr float GAIN_DEATH     = 1.0f;
-    static constexpr float GAIN_BONUS     = 0.9f;
-    static constexpr float GAIN_CENTIPEDE = 0.2f;
-    static constexpr float GAIN_SPIDER    = 1.2f;
-    static constexpr float GAIN_FLEA      = 0.8f;
-    static constexpr float GAIN_SCORPION  = 0.1f;
+    static constexpr float GAIN_SHOOT     = 0.1f;
+    static constexpr float GAIN_KILL      = 0.2f;
+    static constexpr float GAIN_DEATH     = 0.6f;
+    static constexpr float GAIN_BONUS     = 0.8f;
+    static constexpr float GAIN_CENTIPEDE = 0.1f;
+    static constexpr float GAIN_SPIDER    = 0.5f;
+    static constexpr float GAIN_FLEA      = 0.2f;
+    static constexpr float GAIN_SCORPION  = 0.08f;
 
     bool init() {
         if (!MIX_Init()) {

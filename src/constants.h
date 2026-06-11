@@ -85,6 +85,6 @@
 #define SCORE_SCORPION 1000
 
 #define HEAL_FRAMES 6
-#define HEAL_FRAME_RATE 0.08f
+#define HEAL_FRAME_RATE 0.02f
 
 #define WAVE_SPEED_INC 10.0f

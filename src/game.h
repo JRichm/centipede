@@ -70,6 +70,7 @@ class Game {
         int score = 0;
         int high_score = 0;
         float death_timer = 0.0f;
+        float heal_pause_timer = 0.0f;
         SDL_Point palette = {0, 0};
         SDL_Point palette_pending = {0, 0};
         float palette_change_timer = 0.0f;
@@ -83,8 +84,10 @@ class Game {
         void spawn_mushrooms(int count);
         void update_mushroom_spawns(float dt);
         void spawn_centipede();
+        void on_player_death();
         void check_player_death();
         void reset_after_death();
+        void begin_heal_phase();
         void check_wave_complete();
         void start_next_heal();
         int count_lower_mushrooms();

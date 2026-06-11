@@ -23,13 +23,13 @@ struct Scorpion {
     }
 
     SDL_FRect poison_rect() const {
-    return {
-        x + 1.0f,
-        y + 1.0f,
-        float(SCORPION_W) - 2.0f,
-        float(CELL_PX) - 2.0f
-    };
-}
+        return {
+            x + 1.0f,
+            y + 1.0f,
+            float(SCORPION_W) - 2.0f,
+            float(CELL_PX) - 2.0f
+        };
+    }
 
     SDL_FRect src_rect(SDL_Point palette) const { return { float(palette.x + frame * 17), float(palette.y + 72), float(SCORPION_FRAME_W), float(SCORPION_FRAME_H) }; }
 
